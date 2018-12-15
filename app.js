@@ -10,7 +10,9 @@ var knex = require('knex')({
         database: 'meman_system'
     }
 });
+
 app.use(bodyParser.json());
+
 app.use(function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
@@ -26,10 +28,20 @@ app.use(function (req, res, next) {
         next();
     }
 });
+
+//
+//  Get member from database
+//
 app.get('/member', async function (req, res) {
-    const result = await knex.select('*').from('satyam.family_members')
+    const result = await knex('satyam.members')
+        .select('members.*', 'jamat.name as jamat_name')
+        .leftJoin('satyam.jamat', 'jamat.id', 'members.jamat_id');
     res.send(result);
 });
+
+//
+//  Add member in database
+//
 app.post('/member', async function (req, res) {
     console.log(JSON.stringify(req.body));
 
@@ -72,25 +84,34 @@ app.post('/member', async function (req, res) {
             r_place_own: req.body.rown,
             b_place_own: req.body.bown,
             home_date: new Date(),
+            member_id: req.body.member_id
         })
     res.send(home_address_id);
 });
+
 app.get('/jamat', async function (req, res) {
     const result = await knex.select('*').from('satyam.jamat')
     res.send(result);
 });
+
 app.get('/state', async function (req, res) {
     const result = await knex('satyam.city').distinct('state').select();
     res.send(result);
 });
+
 app.get('/district', async function (req, res) {
     const result = await knex('satyam.city').distinct('district').select();
     res.send(result);
 });
+
 app.get('/city', async function (req, res) {
     const result = await knex('satyam.city').select('city');
     res.send(result);
 });
+
+//
+//  Add jamat in database
+//
 app.post('/jamat', async function (req, res) {
     console.log(JSON.stringify(req.body));
     const result = await knex('satyam.jamat')
@@ -98,18 +119,6 @@ app.post('/jamat', async function (req, res) {
             name: req.body.name,
             city: req.body.city,
             state: req.body.state,
-            submited_date: new Date()
-        })
-    res.send(result);
-});
-
-app.post('/viewmember', async function (req, res) {
-    console.log(JSON.stringify(req.body));
-    const result = await knex('satyam.member')
-        .insert({
-            name: req.body.name,
-            father_name: req.body.middlename,
-            surname: req.body.surname,
             submited_date: new Date()
         })
     res.send(result);
