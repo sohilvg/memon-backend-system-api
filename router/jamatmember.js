@@ -20,7 +20,7 @@ router.use(function (req, res, next) {
     }
 });
 /*  Get member from database */
-router.get("/member", async function (req, res) {
+router.get("/api/v1/member", async function (req, res) {
     const result = await knex("usermanagement.members")
         .select("members.*", "jamat.name as jamat_name")
         .leftJoin("usermanagement.jamat", "jamat.id", "members.jamat_id");
@@ -28,31 +28,31 @@ router.get("/member", async function (req, res) {
 });
 
 /*get jamats from database*/
-router.get("/jamat", async function (req, res) {
+router.get("/api/v1/jamat", async function (req, res) {
     const result = await knex.select("*").from("usermanagement.jamat");
     res.send(result);
 });
 /* get states from database*/
-router.get("/states", async function (req, res) {
+router.get("/api/v1/states", async function (req, res) {
     const result = await knex("usermanagement.states")
         .select("*")
         .orderBy("state", "asc");
     res.send(result);
 });
 /* get districts from database*/
-router.get("/district", async function (req, res) {
+router.get("/api/v1/district", async function (req, res) {
     const result = await knex("usermanagement.city")
         .distinct("district")
         .select();
     res.send(result);
 });
 /* get cities from database*/
-router.get("/city", async function (req, res) {
+router.get("/api/v1/city", async function (req, res) {
     const result = await knex("usermanagement.city").select("*");
     res.send(result);
 });
 /* get zones from database*/
-router.get("/zone", async function (req, res) {
+router.get("/api/v1/zone", async function (req, res) {
     const result = await knex.select("*").from("usermanagement.zone");
     res.send(result);
 });

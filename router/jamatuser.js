@@ -22,7 +22,7 @@ router.use(function (req, res, next) {
 });
 
 /* add members to database*/
-router.post("/member", async function (req, res) {
+router.post("/api/v1/member", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const [home_address_id] = await knex("usermanagement.address")
         .insert({
@@ -43,6 +43,18 @@ router.post("/member", async function (req, res) {
             pincode: req.body.work.pincode
         })
         .returning("id");
+        const [family_members_id] = await knex("usermanagement.family_members")
+        .insert({
+            f_name: req.body.fm_name,
+            age: req.body.age,
+            sex: req.body.sex,
+            f_blood_group: req.body.f_blood_group,
+            qualification: req.body.qualification,
+            f_contact: req.body.f_contact,
+        })
+        .returning("id");
+        console.log(JSON.stringify(family_members_id));
+
     const result = await knex("usermanagement.members").insert({
         name: req.body.firstname,
         father_name: req.body.middlename,
@@ -65,6 +77,7 @@ router.post("/member", async function (req, res) {
         blood_group: req.body.blood_group,
         contact_2: req.body.contact_2,
         capable: req.body.capable,
+        family_members_id: family_members_id,
 
     });
     res.send(result);
@@ -72,18 +85,19 @@ router.post("/member", async function (req, res) {
     res.send(home_address_id);
 });
 /* add jamat to database*/
-router.post("/jamat", async function (req, res) {
+router.post("/api/v1/jamat", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const result = await knex("usermanagement.jamat").insert({
         name: req.body.name,
         city: req.body.city,
         state: req.body.state,
+        jamat_code: req.body.jamat_code,
         submited_date: new Date()
     });
     res.send(result);
 });
 /* add zone to database*/
-router.post("/zone", async function (req, res) {
+router.post("/api/v1/zone", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const result = await knex("usermanagement.zone").insert({
         name: req.body.name,
@@ -93,7 +107,7 @@ router.post("/zone", async function (req, res) {
 });
 
 /* add states to database*/
-router.post("/states", async function (req, res) {
+router.post("/api/v1/states", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const result = await knex("usermanagement.states").insert({
         state: req.body.state,
@@ -102,7 +116,7 @@ router.post("/states", async function (req, res) {
     res.send(result);
 });
 /* add cities to database*/
-router.post("/cities", async function (req, res) {
+router.post("/api/v1/cities", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const result = await knex("usermanagement.city").insert({
         city: req.body.city,
@@ -111,26 +125,86 @@ router.post("/cities", async function (req, res) {
     res.send(result);
 });
 /* update states from database */
-// router.put("/states/:state_id", async function (req, res) {
-//     console.log(`state_id ${req.params.state_id}`);
-//     await knex("usermanagement.states")
-//         .where("id", "=", req.params.state_id)
-//         .update("state_code", req.body.state_code);
-//     res.send();
-// });
-router.put("/states", async function (req, res) {
-    console.log(`state_id ${req.params.state_id}`);
+router.put("/api/v1/states", async function (req, res) {
+    console.log(`id ${req.params.id}`);
     await knex("usermanagement.states")
-        .where("id", "=", req.params.state_id)
+        .where("id", "=", req.params.id)
         .update("state_code", req.body.state_code);
     res.send();
 });
 // };
-router.put("/states", async function (req, res) {
-    console.log(`state_id ${req.params.state_id}`);
-    await knex("usermanagement.states")
-        .where("id", "=", req.params.state_id)
-        .update("state_code", req.body.state_code);
-    res.send();
+router.delete('/api/v1/zone/:id', async(req, res) => {
+    try {
+        const result = await knex("usermanagement.zone")
+        .delete()
+        .where("id", "=", req.params.id)
+    return res
+        .status(200)
+        .send({status: 'Successfully Deteted'});
+    } catch (error) {
+        res.status(500);
+
+    }
+});
+
+/*delete member from DB*/
+router.delete('/api/v1/member/:id', async(req, res) => {
+    try {
+        const result = await knex("usermanagement.members")
+        .delete()
+        .where("id", "=", req.params.id)
+    return res
+        .status(200)
+        .send({status: 'Successfully Deteted'});    
+    } catch (error) {
+        res.sendStatus(500);
+        res.send({status:'Failure '})
+    }
+});
+
+/*delete states from DB*/
+router.delete('/api/v1/states/:id', async(req, res) => {
+    try {
+        const result = await knex("usermanagement.states")
+        .delete()
+        .where("id", "=", req.params.id)
+    return res
+        .status(200)
+        .send({status: 'Successfully Deteted'});    
+    } catch (error) {
+        res.sendStatus(500);
+        res.send({status: 'Fail'});
+    }
+});
+
+/*delete cities from DB*/
+router.delete('/api/v1/cities/:id', async(req, res) => {
+    try {
+        const result = await knex("usermanagement.city")
+        .delete()
+        .where("id", "=", req.params.id)
+    return res
+        .status(200)
+        .send({status: 'Successfully Deteted'});    
+    } catch (error) {
+        res.sendStatus(500);
+        res.send({status: 'Fail'});
+    }
+});
+
+/*delete jamat from DB*/
+router.delete('/api/v1/jamat/:id', async(req, res) => {
+    try {
+        const result = await knex("usermanagement.jamat")
+        .delete()
+        .where("id", "=", req.params.id)
+    return res
+        .status(200)
+        .send({status: 'Successfully Deteted'});    
+    } catch (error) {
+        res.sendStatus(500);
+        res.send({status: 'Fail'});
+    }
+    
 });
 module.exports = router;
