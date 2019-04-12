@@ -1,4 +1,5 @@
 const express = require("express");
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 // const bodyParser = require("body-parser");
 const knex = require('../knexfile');
@@ -19,6 +20,13 @@ router.use(function (req, res, next) {
         next();
     }
 });
+/*get login details */
+router.get('/api/v1/signin', async function(req, res) {
+    const result = await knex.select("*").from("usermanagement.users")
+    // res.render('login', { username : req.username });
+    res.send(result);
+});
+
 /*  Get member from database */
 router.get("/api/v1/member", async function (req, res) {
     const result = await knex("usermanagement.members")

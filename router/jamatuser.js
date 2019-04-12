@@ -1,8 +1,13 @@
 // // const knex = require('../helpers/knex');
 const express = require("express");
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
 const router = express.Router();
+require('../config/passport')(passport);
 // const bodyParser = require("body-parser");
 const knex = require('../knexfile');
+const my_secret='ha558moj##ha$$';
+const User=require('../models/user');
 
 router.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -20,7 +25,15 @@ router.use(function (req, res, next) {
         next();
     }
 });
+router.post('/v1/authenticate', async(req, res, next) => {
 
+    const data = req.data
+    const token = jwt.sign({data}, my_secret, {
+        expiresIn: '1s' // expires in 24 hours
+    });
+    res.send({status: 'SUCCESS', message: "Create Token", token: token})
+
+})
 /* add members to database*/
 router.post("/api/v1/member", async function (req, res) {
     console.log(JSON.stringify(req.body));
@@ -84,6 +97,61 @@ router.post("/api/v1/member", async function (req, res) {
     console.log(result);
     res.send(home_address_id);
 });
+
+/*user registration*/
+router.post('/api/v1/signup',async function(req, res) {
+    console.log(req.body);
+    if (!req.body.username || !req.body.password) {
+      res.status(400).send({msg: 'Please pass username and password.'})
+    } else {
+      
+      const result = await knex("usermanagement.users").insert({
+        username: req.body.username,
+        password: req.body.password,
+    });
+    res.send(result);
+
+        // .then((user) => res.status(201).send(user))
+        // .catch((error) => {
+        //   console.log(error);
+        //   res.status(400).send(error);
+        // });
+    }
+  });
+  router.post('/api/v1/signup',User.signup);
+
+  /*user signin*/
+    // router.post('/api/v1/signin', User.signin, async function(req, res) {
+        // const result = await knex.select("*").from("usermanagement.users")
+        //       .where (
+        //        { username: req.body.username,
+        //         password: req.body.password
+        //        })
+        //     // const user = result;
+        //     .then((result) => {
+        //       if (!result) {
+        //         return res.status(401).send({
+        //           message: 'Authentication failed. User not found.',
+        //         });
+        //       }
+        //       result.comparePassword(req.body.password, (err, isMatch) => {
+        //         if(isMatch && !err) {
+        //           var token = jwt.sign(JSON.parse(JSON.stringify(result)), 'nodeauthsecret', {expiresIn: 86400 * 30});
+        //           jwt.verify(token, 'nodeauthsecret', function(err, data){
+        //             console.log(err, data);
+        //           })
+        //           res.json({success: true, token: 'JWT ' + token});
+        //         } else {
+        //           res.status(401).send({success: false, msg: 'Authentication failed. Wrong password.'});
+        //         }
+        //     })})
+        //     .catch((error) => {
+        //     console.error(error.message),
+        //     res.status(400).send(error)
+        //     })
+    //   });
+
+
 /* add jamat to database*/
 router.post("/api/v1/jamat", async function (req, res) {
     console.log(JSON.stringify(req.body));
@@ -99,6 +167,14 @@ router.post("/api/v1/jamat", async function (req, res) {
 /* add zone to database*/
 router.post("/api/v1/zone", async function (req, res) {
     console.log(JSON.stringify(req.body));
+    const data = req.data
+    const token = jwt.sign({data}, my_secret, {
+        expiresIn: '1s' // expires in 24 hours
+    });
+    console.log(token);
+
+    // const token = getToken(req.headers);
+
     const result = await knex("usermanagement.zone").insert({
         name: req.body.name,
         zcode: req.body.zcode,
@@ -207,4 +283,62 @@ router.delete('/api/v1/jamat/:id', async(req, res) => {
     }
     
 });
+
+// getToken = function (headers) {
+//     if (headers && headers.authorization) {
+//       var parted = headers.authorization.split(' ');
+//       if (parted.length === 2) {
+//         return parted[1];
+//       } else {
+//         return null;
+//       }
+//     } else {
+//       return null;
+//     }
+//   };
+
+// router.post('/api/v1/signin', verifyToken, async(req, res, next) => {
+   
+
+//     try {
+//         // const encrypt_username = encrypt(req.body.username);
+//         // const encrypt_password = encrypt(req.body.password);
+
+//         const result = await knex("usermanagement.users")
+//             .insert({username: username, password: password})
+//             .returning('*')
+
+//         jwt.verify(req.token, my_secret, (err, authData) => {
+//             console.log(authData)
+//             if (err) {
+//                 res.sendStatus(403);
+
+//             } else {
+//                 return res.send({
+//                     status:"SUCCESS",
+//                     message: "Create Contoller",
+//                     authData})
+//             }
+//         })
+
+//     } catch (error) {
+
+//         console.error(error);
+//     }
+
+// })
+
+  function verifyToken(req, res, next) {
+    const bearerHearder = req.headers['authorization']
+    if (typeof bearerHearder !== 'undefined') {
+        const bearer = bearerHearder.split(' ');
+        const bearerToken = bearer[1]
+        req.token = bearerToken;
+        next()
+
+    } else {
+        res.sendStatus(403);
+    }
+
+}
 module.exports = router;
