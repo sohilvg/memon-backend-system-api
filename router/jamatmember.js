@@ -2,7 +2,7 @@ const express = require("express");
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 // const bodyParser = require("body-parser");
-const knex = require('../knexfile');
+const knex = require('../db/knexfile');
 
 router.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");

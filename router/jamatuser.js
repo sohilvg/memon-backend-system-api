@@ -1,13 +1,15 @@
 // // const knex = require('../helpers/knex');
 const express = require("express");
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
+// const LocalStrategy=require('passport-local').Strategy;
 const router = express.Router();
 require('../config/passport')(passport);
 // const bodyParser = require("body-parser");
-const knex = require('../knexfile');
+const knex = require('../db/knexfile');
+const algorithm='blahblahblah';
 const my_secret='ha558moj##ha$$';
-const User=require('../models/user');
 
 router.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -99,77 +101,95 @@ router.post("/api/v1/member", async function (req, res) {
 });
 
 /*user registration*/
-router.post('/api/v1/signup',async function(req, res) {
-    console.log(req.body);
-    if (!req.body.username || !req.body.password) {
-      res.status(400).send({msg: 'Please pass username and password.'})
-    } else {
+// router.post('/api/v1/signup',verifyToken,async function(req, res) {
+//     console.log(req.body);
+//     const data = req.data
+//     const token = jwt.sign({data}, my_secret, {
+//         expiresIn: '10h' // expires in 24 hours
+//     });
+//     console.log(token);
+//     if (!req.body.username || !req.body.password) {
+//       res.status(400).send({msg: 'Please pass username and password.'})
+//     } else {
       
-      const result = await knex("usermanagement.users").insert({
-        username: req.body.username,
-        password: req.body.password,
+//       const result = await knex("usermanagement.users").insert({
+//         username: req.body.username,
+//         password: req.body.password,
+//     });
+//     res.send(result);
+
+//         // .then((user) => res.status(201).send(user))
+//         // .catch((error) => {
+//         //   console.log(error);
+//         //   res.status(400).send(error);
+//         // });
+//     }
+//   });
+  router.post('/api/v1/signup', verifyToken, async(req, res, next) => {
+    const data = req.data
+    const token = jwt.sign({data}, my_secret, {
+        expiresIn: '1s' // expires in 24 hours
     });
-    res.send(result);
+console.log(token);
+if (!req.body.username || !req.body.password) {
+          res.status(400).send({msg: 'Please pass username and password.'})
+        } else {
+    try {
+        // const encrypt_username = encrypt(req.body.username);
+        // const encrypt_password = encrypt(req.body.password);
 
-        // .then((user) => res.status(201).send(user))
-        // .catch((error) => {
-        //   console.log(error);
-        //   res.status(400).send(error);
-        // });
-    }
-  });
-  router.post('/api/v1/signup',User.signup);
+        const result = await knex("usermanagement.users")
+            .insert({username: req.body.username, password: req.body.password})
+            .returning('*')
 
-  /*user signin*/
-    // router.post('/api/v1/signin', User.signin, async function(req, res) {
-        // const result = await knex.select("*").from("usermanagement.users")
-        //       .where (
-        //        { username: req.body.username,
-        //         password: req.body.password
-        //        })
-        //     // const user = result;
-        //     .then((result) => {
-        //       if (!result) {
-        //         return res.status(401).send({
-        //           message: 'Authentication failed. User not found.',
-        //         });
-        //       }
-        //       result.comparePassword(req.body.password, (err, isMatch) => {
-        //         if(isMatch && !err) {
-        //           var token = jwt.sign(JSON.parse(JSON.stringify(result)), 'nodeauthsecret', {expiresIn: 86400 * 30});
-        //           jwt.verify(token, 'nodeauthsecret', function(err, data){
-        //             console.log(err, data);
-        //           })
-        //           res.json({success: true, token: 'JWT ' + token});
-        //         } else {
-        //           res.status(401).send({success: false, msg: 'Authentication failed. Wrong password.'});
-        //         }
-        //     })})
-        //     .catch((error) => {
-        //     console.error(error.message),
-        //     res.status(400).send(error)
-        //     })
-    //   });
+        jwt.verify(req.token, my_secret, (err, authData) => {
+            console.log(authData)
+            if (err) {
+                res.sendStatus(403);
 
+            } else {
+                return res.send({
+                    status:"SUCCESS",
+                    message: "Create Contoller",
+                    authData})
+            }
+        })
 
+    } catch (error) {
+
+        console.error(error);
+    }}
+
+});
+// const encrypt = (text) => {
+//     var cipher = crypto.createCipher(algorithm, my_secret)
+//     var crypted = cipher.update(text, 'utf8', 'hex')
+//     crypted += cipher.final('hex');
+//     return crypted;
+// }
 /* add jamat to database*/
 router.post("/api/v1/jamat", async function (req, res) {
-    console.log(JSON.stringify(req.body));
-    const result = await knex("usermanagement.jamat").insert({
-        name: req.body.name,
-        city: req.body.city,
-        state: req.body.state,
-        jamat_code: req.body.jamat_code,
-        submited_date: new Date()
-    });
-    res.send(result);
+    try {
+        console.log(JSON.stringify(req.body));
+        const result = await knex("usermanagement.jamat").insert({
+            name: req.body.name,
+            city: req.body.city,
+            state: req.body.state,
+            jamat_code: req.body.jamat_code,
+            submited_date: new Date()
+        });
+        res.send(result);    
+    } catch (error) {
+        res.sendStatus(500);
+    }
+    
 });
 /* add zone to database*/
 router.post("/api/v1/zone", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const data = req.data
     const token = jwt.sign({data}, my_secret, {
-        expiresIn: '1s' // expires in 24 hours
+        expiresIn: '24h' // expires in 24 hours
     });
     console.log(token);
 
@@ -184,22 +204,31 @@ router.post("/api/v1/zone", async function (req, res) {
 
 /* add states to database*/
 router.post("/api/v1/states", async function (req, res) {
-    console.log(JSON.stringify(req.body));
-    const result = await knex("usermanagement.states").insert({
-        state: req.body.state,
-        state_code: req.body.state_code,
-    });
-    res.send(result);
+    try {
+        console.log(JSON.stringify(req.body));
+        const result = await knex("usermanagement.states").insert({
+            state: req.body.state,
+            state_code: req.body.state_code,
+        });
+        res.send(result);    
+    } catch (error) {
+        res.sendStatus(500);
+    }
+    
 });
 /* add cities to database*/
 router.post("/api/v1/cities", async function (req, res) {
-    console.log(JSON.stringify(req.body));
-    const result = await knex("usermanagement.city").insert({
-        city: req.body.city,
-        city_code: req.body.city_code,
+    try {
+        console.log(JSON.stringify(req.body));
+        const result = await knex("usermanagement.city").insert({
+            city: req.body.city,
+            city_code: req.body.city_code,
+        });
+        res.send(result);
+    } catch (error) {
+        res.status(500);
+    }
     });
-    res.send(result);
-});
 /* update states from database */
 router.put("/api/v1/states", async function (req, res) {
     console.log(`id ${req.params.id}`);
@@ -208,7 +237,8 @@ router.put("/api/v1/states", async function (req, res) {
         .update("state_code", req.body.state_code);
     res.send();
 });
-// };
+
+/*delete zone from DB*/
 router.delete('/api/v1/zone/:id', async(req, res) => {
     try {
         const result = await knex("usermanagement.zone")
@@ -284,50 +314,79 @@ router.delete('/api/v1/jamat/:id', async(req, res) => {
     
 });
 
-// getToken = function (headers) {
-//     if (headers && headers.authorization) {
-//       var parted = headers.authorization.split(' ');
-//       if (parted.length === 2) {
-//         return parted[1];
-//       } else {
-//         return null;
+router.post("/login", async function (req,res) 
+//check data store
+// {
+
+//     if(req.body === undefined) {
+
+//         console.log('True true');
+
+//     }
+{
+    console.log(JSON.stringify(req.body));
+    const result = await knex("usermanagement.zone").insert({
+        name:req.body.name,
+        password:req.body.password
+
+    })
+    res.send(result);
+    console.log(result);
+})
+
+// passport.use(new LocalStrategy(
+//     function(username, password, done) {
+//      User.getUserByUsername(username,function(err,user){
+//          if(err) throw err;
+//          if(!user){
+//              return done(null, false, {message:'Unknown User'});
+//          }
+        
+//          User.comparePassword(password,user.password,function(err,isMatch){
+//              if(err)throw err;
+//              if(isMatch){
+//                  return done(null, user);
+//              }else{
+//                  return done(null, false,{message:'Invalid password'});
+//              }
+//          });
+//      });
+//     }
+//   ));
+
+//   passport.serializeUser(function(user, done) {
+//     done(null, user.id);
+//   });
+  
+//   passport.deserializeUser(function(id, done) {
+//     User.getUserById(id, function(err, user) {
+//       done(err, user);
+//     });
+//   });
+
+// router.post('/login',
+//   passport.authenticate('local',{successRedirect: '/',
+//   failureRedirect: '/login',failureFlash:true}),
+//   function(req, res) {
+//     res.redirect('/');
+//   });
+
+//   router.get('/logout', function(req,res){
+//       req.logOut();
+//       req.flash('success_msg','You are loged out');
+//       res.redirect('/login');
+//   })
+//   router.get('/', ensureAuthenticated, function(req,res){
+//       res.render('jamatuser');
+//   });
+//   function ensureAuthenticated(req,res,next){
+//       if(req.isAuthenticated()){
+//           return next();
+//       }else{
+//           req.flash('error_msg','You are not logged in');
+//           res.redirect('/login');
 //       }
-//     } else {
-//       return null;
-//     }
-//   };
-
-// router.post('/api/v1/signin', verifyToken, async(req, res, next) => {
-   
-
-//     try {
-//         // const encrypt_username = encrypt(req.body.username);
-//         // const encrypt_password = encrypt(req.body.password);
-
-//         const result = await knex("usermanagement.users")
-//             .insert({username: username, password: password})
-//             .returning('*')
-
-//         jwt.verify(req.token, my_secret, (err, authData) => {
-//             console.log(authData)
-//             if (err) {
-//                 res.sendStatus(403);
-
-//             } else {
-//                 return res.send({
-//                     status:"SUCCESS",
-//                     message: "Create Contoller",
-//                     authData})
-//             }
-//         })
-
-//     } catch (error) {
-
-//         console.error(error);
-//     }
-
-// })
-
+//   }
   function verifyToken(req, res, next) {
     const bearerHearder = req.headers['authorization']
     if (typeof bearerHearder !== 'undefined') {
