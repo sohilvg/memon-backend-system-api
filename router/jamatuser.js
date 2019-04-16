@@ -2,6 +2,7 @@
 const express = require("express");
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const privatekey='smit45#bhayo';
 const passport = require('passport');
 // const LocalStrategy=require('passport-local').Strategy;
 const router = express.Router();
@@ -128,7 +129,7 @@ router.post("/api/v1/member", async function (req, res) {
   router.post('/api/v1/signup', verifyToken, async(req, res, next) => {
     const data = req.data
     const token = jwt.sign({data}, my_secret, {
-        expiresIn: '1s' // expires in 24 hours
+        expiresIn: '24h' // expires in 24 hours
     });
 console.log(token);
 if (!req.body.username || !req.body.password) {
@@ -167,6 +168,68 @@ if (!req.body.username || !req.body.password) {
 //     crypted += cipher.final('hex');
 //     return crypted;
 // }
+/*login user api*/
+router.post('/api/v1/login', async(req, res, next) => {
+    const { body } = req;
+    const { username } = body;
+    const { password } = body;
+    if (!req.body.username || !req.body.password) {
+              res.status(400).send({msg: 'Please pass username and password.'})
+            } else {
+    const user = await knex("usermanagement.users").where({
+        username:req.body.username,
+        password:req.body.password
+    }).first();
+
+    //checking to make sure the user entered the correct username/password combo
+    if(username === user.username && password === user.password) { 
+        //if user log in success, generate a JWT token for the user with a secret key
+        jwt.sign({user}, privatekey, { expiresIn: '2h' },(err, token) => {
+            if(err) { console.log(err) }    
+            res.send(token);
+        });
+    } else {
+        console.log('ERROR: Could not log in');
+    }}
+})
+const checkToken = (req, res, next) => {
+    const header = req.headers['authorization'];
+
+    if(typeof header !== 'undefined') {
+        const bearer = header.split(' ');
+        const token = bearer[1];
+
+        req.token = token;
+        next();
+    } else {
+        //If header is undefined return Forbidden (403)
+        res.sendStatus(403)
+    }
+}
+
+ //This is a protected route 
+ router.get('/user/data', checkToken,  (req, res) => {
+    //verify the JWT token generated for the user
+    jwt.verify(req.token, privatekey, (err, authorizedData) => {
+    // res.send(result);
+        if(err){
+            //If error send Forbidden (403)
+            console.log('ERROR: Could not connect to the protected route');
+            res.sendStatus(403);
+        } else {
+        const result =  knex.select("*").from("sohil.signup");
+console.log(result);
+            //If token is successfully verified, we can send the autorized data 
+            res.json({
+                message: 'Successful log in',
+                authorizedData   ,result:result[0]         });
+                
+                    // res.send(result);
+            console.log('SUCCESS: Connected to protected route');
+        }
+    })
+});
+
 /* add jamat to database*/
 router.post("/api/v1/jamat", async function (req, res) {
     try {
@@ -314,7 +377,9 @@ router.delete('/api/v1/jamat/:id', async(req, res) => {
     
 });
 
-router.post("/login", async function (req,res) 
+router.post("/api/v1/login", passport.authenticate('local', { successRedirect: '/',
+failureRedirect: '/api/v1/login'})); 
+// async function (req,res) 
 //check data store
 // {
 
@@ -323,16 +388,16 @@ router.post("/login", async function (req,res)
 //         console.log('True true');
 
 //     }
-{
-    console.log(JSON.stringify(req.body));
-    const result = await knex("usermanagement.zone").insert({
-        name:req.body.name,
-        password:req.body.password
+// {
+    // console.log(JSON.stringify(req.body));
+//     const result = await knex("usermanagement.users").insert({
+//         name:req.body.name,
+//         password:req.body.password
 
-    })
-    res.send(result);
-    console.log(result);
-})
+//     })
+//     res.send(result);
+//     console.log(result);
+// })
 
 // passport.use(new LocalStrategy(
 //     function(username, password, done) {
@@ -394,10 +459,10 @@ router.post("/login", async function (req,res)
         const bearerToken = bearer[1]
         req.token = bearerToken;
         next()
-
     } else {
         res.sendStatus(403);
     }
-
 }
+
+
 module.exports = router;
