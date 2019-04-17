@@ -2,15 +2,15 @@
 const express = require("express");
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const privatekey='smit45#bhayo';
+const privatekey = 'smit45#bhayo';
 const passport = require('passport');
 // const LocalStrategy=require('passport-local').Strategy;
 const router = express.Router();
 require('../config/passport')(passport);
 // const bodyParser = require("body-parser");
 const knex = require('../db/knexfile');
-const algorithm='blahblahblah';
-const my_secret='ha558moj##ha$$';
+const algorithm = 'blahblahblah';
+const my_secret = 'ha558moj##ha$$';
 
 router.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -28,13 +28,13 @@ router.use(function (req, res, next) {
         next();
     }
 });
-router.post('/v1/authenticate', async(req, res, next) => {
+router.post('/v1/authenticate', async (req, res, next) => {
 
     const data = req.data
-    const token = jwt.sign({data}, my_secret, {
+    const token = jwt.sign({ data }, my_secret, {
         expiresIn: '1s' // expires in 24 hours
     });
-    res.send({status: 'SUCCESS', message: "Create Token", token: token})
+    res.send({ status: 'SUCCESS', message: "Create Token", token: token })
 
 })
 /* add members to database*/
@@ -59,7 +59,7 @@ router.post("/api/v1/member", async function (req, res) {
             pincode: req.body.work.pincode
         })
         .returning("id");
-        const [family_members_id] = await knex("usermanagement.family_members")
+    const [family_members_id] = await knex("usermanagement.family_members")
         .insert({
             f_name: req.body.fm_name,
             age: req.body.age,
@@ -69,7 +69,7 @@ router.post("/api/v1/member", async function (req, res) {
             f_contact: req.body.f_contact,
         })
         .returning("id");
-        console.log(JSON.stringify(family_members_id));
+    console.log(JSON.stringify(family_members_id));
 
     const result = await knex("usermanagement.members").insert({
         name: req.body.firstname,
@@ -112,7 +112,7 @@ router.post("/api/v1/member", async function (req, res) {
 //     if (!req.body.username || !req.body.password) {
 //       res.status(400).send({msg: 'Please pass username and password.'})
 //     } else {
-      
+
 //       const result = await knex("usermanagement.users").insert({
 //         username: req.body.username,
 //         password: req.body.password,
@@ -126,40 +126,62 @@ router.post("/api/v1/member", async function (req, res) {
 //         // });
 //     }
 //   });
-  router.post('/api/v1/signup', verifyToken, async(req, res, next) => {
+router.post('/api/v1/signup', verifyToken, async (req, res, next) => {
     const data = req.data
-    const token = jwt.sign({data}, my_secret, {
+    const token = jwt.sign({ data }, privatekey, {
         expiresIn: '24h' // expires in 24 hours
     });
-console.log(token);
-if (!req.body.username || !req.body.password) {
-          res.status(400).send({msg: 'Please pass username and password.'})
-        } else {
-    try {
-        // const encrypt_username = encrypt(req.body.username);
-        // const encrypt_password = encrypt(req.body.password);
+    console.log(token);
+    const { body } = req;
+    const { username } = body;
+    const { password } = body;
+    const { email } = body;
+    const { firstName } = body;
+    if (!req.body.username || !req.body.password || !req.body.email || !req.body.firstName) {
+        res.status(400).send({ msg: 'Please pass username and password.' })
+    } else {
+        try {
+            const user = await knex("usermanagement.users").where({
+                username: req.body.username,
+                password: req.body.password,
+                email: req.body.email
+            }).first();
 
-        const result = await knex("usermanagement.users")
-            .insert({username: req.body.username, password: req.body.password})
-            .returning('*')
+            //checking to make sure the user entered the correct username/password combo
+            if (username === user.username && password === user.password && email === user.email) {
+                //if user log in success, generate a JWT token for the user with a secret key
 
-        jwt.verify(req.token, my_secret, (err, authData) => {
-            console.log(authData)
-            if (err) {
-                res.sendStatus(403);
+                res.json({
+                    message: 'User Already Exist'
+                });
 
             } else {
-                return res.send({
-                    status:"SUCCESS",
-                    message: "Create Contoller",
-                    authData})
+                // const encrypt_username = encrypt(req.body.username);
+                // const encrypt_password = encrypt(req.body.password);
+
+                const result = await knex("usermanagement.users")
+                    .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName })
+                    .returning('*')
+                console.log(result);
+                jwt.verify(req.token, privatekey, (err, authData) => {
+                    console.log(authData)
+                    if (err) {
+                        res.sendStatus(403);
+
+                    } else {
+                        return res.send({
+                            status: "SUCCESS",
+                            message: "User created "
+                            // authData
+                        })
+                    }
+                })
             }
-        })
+        } catch (error) {
 
-    } catch (error) {
-
-        console.error(error);
-    }}
+            console.error(error);
+        }
+    }
 
 });
 // const encrypt = (text) => {
@@ -169,33 +191,49 @@ if (!req.body.username || !req.body.password) {
 //     return crypted;
 // }
 /*login user api*/
-router.post('/api/v1/login', async(req, res, next) => {
+router.post('/api/v1/login', async (req, res, next) => {
     const { body } = req;
     const { username } = body;
     const { password } = body;
-    if (!req.body.username || !req.body.password) {
-              res.status(400).send({msg: 'Please pass username and password.'})
-            } else {
-    const user = await knex("usermanagement.users").where({
-        username:req.body.username,
-        password:req.body.password
-    }).first();
-
-    //checking to make sure the user entered the correct username/password combo
-    if(username === user.username && password === user.password) { 
-        //if user log in success, generate a JWT token for the user with a secret key
-        jwt.sign({user}, privatekey, { expiresIn: '2h' },(err, token) => {
-            if(err) { console.log(err) }    
-            res.send(token);
-        });
+    if (!req.body.username || !req.body.password || !req.body.email) {
+        res.status(400).send({ msg: 'Please pass username and password.' })
     } else {
-        console.log('ERROR: Could not log in');
-    }}
-})
+        try {
+            //             const encrypt_username = encrypt(req.body.username);
+            // const encrypt_password = encrypt(req.body.password);
+
+            const user = await knex("usermanagement.users").where({
+                username: req.body.username,
+                password: req.body.password
+            }).first();
+
+            //checking to make sure the user entered the correct username/password combo
+            if (username === user.username && password === user.password) {
+                //if user log in success, generate a JWT token for the user with a secret key
+                jwt.verify(req.token, privatekey, { expiresIn: '2h' }, (err, authData) => {
+                    console.log(authData)
+                    // jwt.sign({ user }, privatekey, { expiresIn: '2h' }, (err, token) => {
+                    if (err) { console.log(err) }
+                    res.send(token);
+                    res.json({
+                        message: 'Successful log in'
+                    });
+                });
+
+            } else {
+                console.log('ERROR: Could not log in');
+            }
+        } catch (error) {
+            console.error('ERROR: Could not log in');
+
+        }
+    }
+
+});
 const checkToken = (req, res, next) => {
     const header = req.headers['authorization'];
 
-    if(typeof header !== 'undefined') {
+    if (typeof header !== 'undefined') {
         const bearer = header.split(' ');
         const token = bearer[1];
 
@@ -207,24 +245,25 @@ const checkToken = (req, res, next) => {
     }
 }
 
- //This is a protected route 
- router.get('/user/data', checkToken,  (req, res) => {
+//This is a protected route 
+router.get('/user/data', checkToken, (req, res) => {
     //verify the JWT token generated for the user
     jwt.verify(req.token, privatekey, (err, authorizedData) => {
-    // res.send(result);
-        if(err){
+        // res.send(result);
+        if (err) {
             //If error send Forbidden (403)
             console.log('ERROR: Could not connect to the protected route');
             res.sendStatus(403);
         } else {
-        const result =  knex.select("*").from("sohil.signup");
-console.log(result);
+            const result = knex.select("*").from("sohil.signup");
+            console.log(result);
             //If token is successfully verified, we can send the autorized data 
             res.json({
                 message: 'Successful log in',
-                authorizedData   ,result:result[0]         });
-                
-                    // res.send(result);
+                authorizedData, result: result[0]
+            });
+
+            // res.send(result);
             console.log('SUCCESS: Connected to protected route');
         }
     })
@@ -241,17 +280,17 @@ router.post("/api/v1/jamat", async function (req, res) {
             jamat_code: req.body.jamat_code,
             submited_date: new Date()
         });
-        res.send(result);    
+        res.send(result);
     } catch (error) {
         res.sendStatus(500);
     }
-    
+
 });
 /* add zone to database*/
 router.post("/api/v1/zone", async function (req, res) {
     console.log(JSON.stringify(req.body));
     const data = req.data
-    const token = jwt.sign({data}, my_secret, {
+    const token = jwt.sign({ data }, my_secret, {
         expiresIn: '24h' // expires in 24 hours
     });
     console.log(token);
@@ -273,11 +312,11 @@ router.post("/api/v1/states", async function (req, res) {
             state: req.body.state,
             state_code: req.body.state_code,
         });
-        res.send(result);    
+        res.send(result);
     } catch (error) {
         res.sendStatus(500);
     }
-    
+
 });
 /* add cities to database*/
 router.post("/api/v1/cities", async function (req, res) {
@@ -291,7 +330,7 @@ router.post("/api/v1/cities", async function (req, res) {
     } catch (error) {
         res.status(500);
     }
-    });
+});
 /* update states from database */
 router.put("/api/v1/states", async function (req, res) {
     console.log(`id ${req.params.id}`);
@@ -302,14 +341,14 @@ router.put("/api/v1/states", async function (req, res) {
 });
 
 /*delete zone from DB*/
-router.delete('/api/v1/zone/:id', async(req, res) => {
+router.delete('/api/v1/zone/:id', async (req, res) => {
     try {
         const result = await knex("usermanagement.zone")
-        .delete()
-        .where("id", "=", req.params.id)
-    return res
-        .status(200)
-        .send({status: 'Successfully Deteted'});
+            .delete()
+            .where("id", "=", req.params.id)
+        return res
+            .status(200)
+            .send({ status: 'Successfully Deteted' });
     } catch (error) {
         res.status(500);
 
@@ -317,142 +356,68 @@ router.delete('/api/v1/zone/:id', async(req, res) => {
 });
 
 /*delete member from DB*/
-router.delete('/api/v1/member/:id', async(req, res) => {
+router.delete('/api/v1/member/:id', async (req, res) => {
     try {
         const result = await knex("usermanagement.members")
-        .delete()
-        .where("id", "=", req.params.id)
-    return res
-        .status(200)
-        .send({status: 'Successfully Deteted'});    
+            .delete()
+            .where("id", "=", req.params.id)
+        return res
+            .status(200)
+            .send({ status: 'Successfully Deteted' });
     } catch (error) {
         res.sendStatus(500);
-        res.send({status:'Failure '})
+        res.send({ status: 'Failure ' })
     }
 });
 
 /*delete states from DB*/
-router.delete('/api/v1/states/:id', async(req, res) => {
+router.delete('/api/v1/states/:id', async (req, res) => {
     try {
         const result = await knex("usermanagement.states")
-        .delete()
-        .where("id", "=", req.params.id)
-    return res
-        .status(200)
-        .send({status: 'Successfully Deteted'});    
+            .delete()
+            .where("id", "=", req.params.id)
+        return res
+            .status(200)
+            .send({ status: 'Successfully Deteted' });
     } catch (error) {
         res.sendStatus(500);
-        res.send({status: 'Fail'});
+        res.send({ status: 'Fail' });
     }
 });
 
 /*delete cities from DB*/
-router.delete('/api/v1/cities/:id', async(req, res) => {
+router.delete('/api/v1/cities/:id', async (req, res) => {
     try {
         const result = await knex("usermanagement.city")
-        .delete()
-        .where("id", "=", req.params.id)
-    return res
-        .status(200)
-        .send({status: 'Successfully Deteted'});    
+            .delete()
+            .where("id", "=", req.params.id)
+        return res
+            .status(200)
+            .send({ status: 'Successfully Deteted' });
     } catch (error) {
         res.sendStatus(500);
-        res.send({status: 'Fail'});
+        res.send({ status: 'Fail' });
     }
 });
 
 /*delete jamat from DB*/
-router.delete('/api/v1/jamat/:id', async(req, res) => {
+router.delete('/api/v1/jamat/:id', async (req, res) => {
     try {
         const result = await knex("usermanagement.jamat")
-        .delete()
-        .where("id", "=", req.params.id)
-    return res
-        .status(200)
-        .send({status: 'Successfully Deteted'});    
+            .delete()
+            .where("id", "=", req.params.id)
+        return res
+            .status(200)
+            .send({ status: 'Successfully Deteted' });
     } catch (error) {
         res.sendStatus(500);
-        res.send({status: 'Fail'});
+        res.send({ status: 'Fail' });
     }
-    
+
 });
 
-router.post("/api/v1/login", passport.authenticate('local', { successRedirect: '/',
-failureRedirect: '/api/v1/login'})); 
-// async function (req,res) 
-//check data store
-// {
-
-//     if(req.body === undefined) {
-
-//         console.log('True true');
-
-//     }
-// {
-    // console.log(JSON.stringify(req.body));
-//     const result = await knex("usermanagement.users").insert({
-//         name:req.body.name,
-//         password:req.body.password
-
-//     })
-//     res.send(result);
-//     console.log(result);
-// })
-
-// passport.use(new LocalStrategy(
-//     function(username, password, done) {
-//      User.getUserByUsername(username,function(err,user){
-//          if(err) throw err;
-//          if(!user){
-//              return done(null, false, {message:'Unknown User'});
-//          }
-        
-//          User.comparePassword(password,user.password,function(err,isMatch){
-//              if(err)throw err;
-//              if(isMatch){
-//                  return done(null, user);
-//              }else{
-//                  return done(null, false,{message:'Invalid password'});
-//              }
-//          });
-//      });
-//     }
-//   ));
-
-//   passport.serializeUser(function(user, done) {
-//     done(null, user.id);
-//   });
-  
-//   passport.deserializeUser(function(id, done) {
-//     User.getUserById(id, function(err, user) {
-//       done(err, user);
-//     });
-//   });
-
-// router.post('/login',
-//   passport.authenticate('local',{successRedirect: '/',
-//   failureRedirect: '/login',failureFlash:true}),
-//   function(req, res) {
-//     res.redirect('/');
-//   });
-
-//   router.get('/logout', function(req,res){
-//       req.logOut();
-//       req.flash('success_msg','You are loged out');
-//       res.redirect('/login');
-//   })
-//   router.get('/', ensureAuthenticated, function(req,res){
-//       res.render('jamatuser');
-//   });
-//   function ensureAuthenticated(req,res,next){
-//       if(req.isAuthenticated()){
-//           return next();
-//       }else{
-//           req.flash('error_msg','You are not logged in');
-//           res.redirect('/login');
-//       }
-//   }
-  function verifyToken(req, res, next) {
+/* Token verify*/
+function verifyToken(req, res, next) {
     const bearerHearder = req.headers['authorization']
     if (typeof bearerHearder !== 'undefined') {
         const bearer = bearerHearder.split(' ');
