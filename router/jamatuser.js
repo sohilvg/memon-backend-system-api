@@ -136,20 +136,20 @@ router.post('/api/v1/signup', async (req, res, next) => {
         res.status(400).send({ msg: 'Please pass username and password.' })
     } else {
         try {
+
             // const encrypt_username = encrypt(req.body.username);
             // const encrypt_password = encrypt(req.body.password);
+            const data = req.data
+            const token = jwt.sign({ data }, my_secret, {
+                expiresIn: '24h' // expires in 24 hours
+            });
 
-
-            const user = await knex("usermanagement.users")
-                .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName, token: req.token })
+            console.log(token)
+            const result = await knex("usermanagement.users")
+                .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName, token: token })
                 .returning('*')
 
-
-            jwt.sign({ user }, privatekey, { expiresIn: '24h' }, (err, token) => {
-                if (err) { console.log(err) }
-                res.send(token);
-
-            });
+            res.send(result)
             // jwt.verify(req.token, privatekey, (err, authData) => {
             //     console.log(authData)
             //     if (err) {
@@ -198,10 +198,13 @@ router.post('/api/v1/login', verifyToken, async (req, res, next) => {
 
             //checking to make sure the user entered the correct username/password combo
             if (username === user.username && password === user.password) {
-                jwt.verify(user.token, privatekey, (err, authData) => {
+                jwt.verify(req.token, privatekey, (err, authData) => {
                     console.log(authData)
                     if (err) {
-                        res.sendStatus(403);
+                        res.status(401).json({
+                            success: false,
+                            message: 'Authentification failed.'
+                        });
                         console.log('ERROR: Could not log in');
                     } else {
                         return res.send({
