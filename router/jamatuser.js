@@ -126,57 +126,44 @@ router.post("/api/v1/member", async function (req, res) {
 //         // });
 //     }
 //   });
-router.post('/api/v1/signup', verifyToken, async (req, res, next) => {
-    const data = req.data
-    const token = jwt.sign({ data }, privatekey, {
-        expiresIn: '24h' // expires in 24 hours
-    });
-    console.log(token);
-    const { body } = req;
-    const { username } = body;
-    const { password } = body;
-    const { email } = body;
-    const { firstName } = body;
+router.post('/api/v1/signup', async (req, res, next) => {
+    // const data = req.data
+    // const token = jwt.sign({ data }, privatekey, {
+    //     expiresIn: '24h' // expires in 24 hours
+    // });
+    // console.log(token);
     if (!req.body.username || !req.body.password || !req.body.email || !req.body.firstName) {
         res.status(400).send({ msg: 'Please pass username and password.' })
     } else {
         try {
-            const user = await knex("usermanagement.users").where({
-                username: req.body.username,
-                password: req.body.password,
-                email: req.body.email
-            }).first();
+            // const encrypt_username = encrypt(req.body.username);
+            // const encrypt_password = encrypt(req.body.password);
 
-            //checking to make sure the user entered the correct username/password combo
-            if (username === user.username && password === user.password && email === user.email) {
-                //if user log in success, generate a JWT token for the user with a secret key
 
-                res.json({
-                    message: 'User Already Exist'
-                });
+            const user = await knex("usermanagement.users")
+                .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName, token: req.token })
+                .returning('*')
 
-            } else {
-                // const encrypt_username = encrypt(req.body.username);
-                // const encrypt_password = encrypt(req.body.password);
 
-                const result = await knex("usermanagement.users")
-                    .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName })
-                    .returning('*')
-                console.log(result);
-                jwt.verify(req.token, privatekey, (err, authData) => {
-                    console.log(authData)
-                    if (err) {
-                        res.sendStatus(403);
+            jwt.sign({ user }, privatekey, { expiresIn: '24h' }, (err, token) => {
+                if (err) { console.log(err) }
+                res.send(token);
 
-                    } else {
-                        return res.send({
-                            status: "SUCCESS",
-                            message: "User created "
-                            // authData
-                        })
-                    }
-                })
-            }
+            });
+            // jwt.verify(req.token, privatekey, (err, authData) => {
+            //     console.log(authData)
+            //     if (err) {
+            //         res.sendStatus(403);
+
+            //     } else {
+            //         return res.send({
+            //             status: "SUCCESS",
+            //             message: "User created "
+            //             // authData
+            //         })
+            //     }
+            // })
+
         } catch (error) {
 
             console.error(error);
@@ -191,11 +178,12 @@ router.post('/api/v1/signup', verifyToken, async (req, res, next) => {
 //     return crypted;
 // }
 /*login user api*/
-router.post('/api/v1/login', async (req, res, next) => {
+router.post('/api/v1/login', verifyToken, async (req, res, next) => {
     const { body } = req;
     const { username } = body;
     const { password } = body;
-    if (!req.body.username || !req.body.password || !req.body.email) {
+    // const { email } = body;
+    if (!req.body.username && !req.body.password) {
         res.status(400).send({ msg: 'Please pass username and password.' })
     } else {
         try {
@@ -203,25 +191,38 @@ router.post('/api/v1/login', async (req, res, next) => {
             // const encrypt_password = encrypt(req.body.password);
 
             const user = await knex("usermanagement.users").where({
+                // email: req.body.email,
                 username: req.body.username,
                 password: req.body.password
             }).first();
 
             //checking to make sure the user entered the correct username/password combo
             if (username === user.username && password === user.password) {
-                //if user log in success, generate a JWT token for the user with a secret key
-                jwt.verify(req.token, privatekey, { expiresIn: '2h' }, (err, authData) => {
+                jwt.verify(user.token, privatekey, (err, authData) => {
                     console.log(authData)
-                    // jwt.sign({ user }, privatekey, { expiresIn: '2h' }, (err, token) => {
-                    if (err) { console.log(err) }
-                    res.send(token);
-                    res.json({
-                        message: 'Successful log in'
-                    });
-                });
+                    if (err) {
+                        res.sendStatus(403);
+                        console.log('ERROR: Could not log in');
+                    } else {
+                        return res.send({
+                            status: "SUCCESS",
+                            message: 'Successful log in'
+                            // authData
+                        });
+                    }
+                })
+                //if user log in success, generate a JWT token for the user with a secret key
+                //     jwt.sign({ user }, privatekey, { expiresIn: '2h' }, (err, token) => {
+                //         if (err) { console.log(err) }
+                //         res.send(token);
+                //         res.json({
+                //             message: 'Successful log in'
+                //         });
+                //     });
 
-            } else {
-                console.log('ERROR: Could not log in');
+                // } else {
+                //     console.log('ERROR: Could not log in');
+                // }
             }
         } catch (error) {
             console.error('ERROR: Could not log in');
