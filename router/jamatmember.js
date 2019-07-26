@@ -21,7 +21,7 @@ router.use(function (req, res, next) {
     }
 });
 /*get login details */
-router.get('/api/v1/signin', async function(req, res) {
+router.get('/api/v1/signin', async function (req, res) {
     const result = await knex.select("*").from("usermanagement.users")
     // res.render('login', { username : req.username });
     res.send(result);

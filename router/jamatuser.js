@@ -9,7 +9,9 @@ const router = express.Router();
 require('../config/passport')(passport);
 // const bodyParser = require("body-parser");
 const knex = require('../db/knexfile');
-const algorithm = 'blahblahblah';
+// const algorithm = 'blahblahblah';
+const algorithm = 'aes-256-ctr';
+// const algorithm = 'aes-128-cbc';
 const my_secret = 'ha558moj##ha$$';
 
 router.use(function (req, res, next) {
@@ -137,8 +139,8 @@ router.post('/api/v1/signup', async (req, res, next) => {
     } else {
         try {
 
-            // const encrypt_username = encrypt(req.body.username);
-            // const encrypt_password = encrypt(req.body.password);
+            const encrypt_username = encrypt(req.body.username);
+            const encrypt_password = encrypt(req.body.password);
             const data = req.data
             const token = jwt.sign({ data }, my_secret, {
                 expiresIn: '24h' // expires in 24 hours
@@ -146,7 +148,8 @@ router.post('/api/v1/signup', async (req, res, next) => {
 
             console.log(token)
             const result = await knex("usermanagement.users")
-                .insert({ username: req.body.username, password: req.body.password, email: req.body.email, firstName: req.body.firstName, token: token })
+                .distinct(username, password, email)
+                .insert({ username: encrypt_username, password: encrypt_password, email: req.body.email, firstName: req.body.firstName, token: token })
                 .returning('*')
 
             res.send(result)
@@ -171,62 +174,70 @@ router.post('/api/v1/signup', async (req, res, next) => {
     }
 
 });
-// const encrypt = (text) => {
-//     var cipher = crypto.createCipher(algorithm, my_secret)
-//     var crypted = cipher.update(text, 'utf8', 'hex')
-//     crypted += cipher.final('hex');
-//     return crypted;
-// }
+
+const encrypt = (text) => {
+    var cipher = crypto.createCipher(algorithm, my_secret)
+    var crypted = cipher.update(text, 'utf8', 'hex')
+    crypted += cipher.final('hex');
+    return crypted;
+}
 /*login user api*/
-router.post('/api/v1/login', verifyToken, async (req, res, next) => {
+router.post('/api/v1/login', async (req, res, next) => {
     const { body } = req;
     const { username } = body;
     const { password } = body;
-    // const { email } = body;
+    // const { email } = body;    // const data = req.data
+
     if (!req.body.username && !req.body.password) {
         res.status(400).send({ msg: 'Please pass username and password.' })
     } else {
         try {
-            //             const encrypt_username = encrypt(req.body.username);
-            // const encrypt_password = encrypt(req.body.password);
+            // const data = req.data
 
+            // const encrypted_username = encrypt(data);
+            // const encrypted_password = encrypt(req.body.password);
             const user = await knex("usermanagement.users").where({
                 // email: req.body.email,
                 username: req.body.username,
                 password: req.body.password
             }).first();
+            // const user = await knex("usermanagement.users")
+            //     .select("users.username", "users.password").first();
+            // // const decrepted_username = decrypt(user.username);
+            // // const decrepted_password = decrypt(user.password);
+            // console.log(decrepted_username);
 
             //checking to make sure the user entered the correct username/password combo
             if (username === user.username && password === user.password) {
-                jwt.verify(req.token, privatekey, (err, authData) => {
-                    console.log(authData)
-                    if (err) {
-                        res.status(401).json({
-                            success: false,
-                            message: 'Authentification failed.'
-                        });
-                        console.log('ERROR: Could not log in');
-                    } else {
-                        return res.send({
-                            status: "SUCCESS",
-                            message: 'Successful log in'
-                            // authData
-                        });
-                    }
-                })
-                //if user log in success, generate a JWT token for the user with a secret key
-                //     jwt.sign({ user }, privatekey, { expiresIn: '2h' }, (err, token) => {
-                //         if (err) { console.log(err) }
-                //         res.send(token);
-                //         res.json({
-                //             message: 'Successful log in'
+                // jwt.verify(req.token, privatekey, (err, authData) => {
+                //     console.log(authData)
+                //     if (err) {
+                //         res.status(401).json({
+                //             success: false,
+                //             message: 'Authentification failed.'
                 //         });
-                //     });
+                //         console.log('ERROR: Could not log in');
+                //     } else {
+                //         return res.send({
+                //             status: "SUCCESS",
+                //             message: 'Successful log in'
+                //             // authData
+                //         });
+                //     }
+                // })
+                //if user log in success, generate a JWT token for the user with a secret key
+                jwt.sign({ user }, privatekey, { expiresIn: '2h' }, (err, token) => {
+                    if (err) { console.log(err) }
+                    res.send(token);
+                    res.json({
+                        message: 'Successful log in'
+                    });
+                });
 
-                // } else {
-                //     console.log('ERROR: Could not log in');
-                // }
+            } else {
+                console.log('ERROR: Could not log in');
             }
+            // }
         } catch (error) {
             console.error('ERROR: Could not log in');
 
@@ -234,6 +245,12 @@ router.post('/api/v1/login', verifyToken, async (req, res, next) => {
     }
 
 });
+const decrypt = (text) => {
+    var decipher = crypto.createDecipher(algorithm, my_secret)
+    var dec = decipher.update(text, 'hex', 'utf8')
+    dec += decipher.final('utf8');
+    return dec;
+}
 const checkToken = (req, res, next) => {
     const header = req.headers['authorization'];
 
