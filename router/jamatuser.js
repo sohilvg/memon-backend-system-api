@@ -148,7 +148,7 @@ router.post('/api/v1/signup', async (req, res, next) => {
 
             console.log(token)
             const result = await knex("usermanagement.users")
-                .distinct(username, password, email)
+                .distinct(encrypt_username, encrypt_password, req.body.email)
                 .insert({ username: encrypt_username, password: encrypt_password, email: req.body.email, firstName: req.body.firstName, token: token })
                 .returning('*')
 
